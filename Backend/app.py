@@ -234,6 +234,38 @@ def delete_opportunity(id):
 
     return {"message": "Deleted"}
 
+@app.route('/api/opportunities/<int:id>', methods=['PUT', 'OPTIONS'])
+def update_opportunity(id):
+    if request.method == 'OPTIONS':
+        return {}, 200
+
+    if 'admin_id' not in session:
+        return {"error": "Unauthorized"}, 401
+
+    data = request.get_json()
+
+    opp = Opportunity.query.filter_by(
+        id=id,
+        admin_id=session['admin_id']
+    ).first()
+
+    if not opp:
+        return {"error": "Not found"}, 404
+
+    opp.name = data.get('name')
+    opp.category = data.get('category')
+    opp.duration = data.get('duration')
+    opp.start_date = data.get('start_date')
+    opp.description = data.get('description')
+    opp.skills = data.get('skills')
+    opp.future_opportunities = data.get('future_opportunities')
+    opp.max_applicants = data.get('max_applicants')
+
+    db.session.commit()
+
+    return {"message": "Updated"}
+
+
 # ===== RUN APP =====
 if __name__ == '__main__':
     print("🔥 ENTERED MAIN BLOCK")
