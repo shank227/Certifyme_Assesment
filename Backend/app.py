@@ -1,5 +1,5 @@
 print("🔥 APP FILE EXECUTING")
-
+import os
 from flask import Flask, request, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -10,7 +10,8 @@ import uuid
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BASE_DIR, 'database.db')
 app.config['SECRET_KEY'] = 'secret123'
 
 db = SQLAlchemy(app)
@@ -22,9 +23,24 @@ class Admin(db.Model):
     email = db.Column(db.String(100), unique=True)
     password = db.Column(db.String(200))
 
-    # 🔥 Forgot password fields
     reset_token = db.Column(db.String(200))
     reset_token_expiry = db.Column(db.DateTime)
+
+
+# 🔥 NEW MODEL
+class Opportunity(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200))
+    category = db.Column(db.String(100))
+    duration = db.Column(db.String(50))
+    start_date = db.Column(db.String(50))
+    description = db.Column(db.Text)
+    skills = db.Column(db.String(200))
+    future_opportunities = db.Column(db.String(200))
+    max_applicants = db.Column(db.Integer)
+
+    admin_id = db.Column(db.Integer, db.ForeignKey('admin.id'))
+
 
 # ===== ROUTES =====
 
@@ -47,21 +63,16 @@ def signup():
     if existing:
         return {"error": "Email already exists"}, 400
 
-    try:
-        user = Admin(
-            full_name=full_name,
-            email=email,
-            password=generate_password_hash(password, method='pbkdf2:sha256')
-        )
+    user = Admin(
+        full_name=full_name,
+        email=email,
+        password=generate_password_hash(password, method='pbkdf2:sha256')
+    )
 
-        db.session.add(user)
-        db.session.commit()
+    db.session.add(user)
+    db.session.commit()
 
-        return {"message": "Signup successful"}
-
-    except Exception as e:
-        print("ERROR:", str(e))
-        return {"error": "Server error"}, 500
+    return {"message": "Signup successful"}
 
 
 # ✅ LOGIN
@@ -79,6 +90,7 @@ def login():
     user = Admin.query.filter_by(email=email).first()
 
     if user and check_password_hash(user.password, password):
+        print("LOGIN USER ID:", user.id)  # 🔥 HERE
         session['admin_id'] = user.id
 
         if remember:
@@ -89,7 +101,7 @@ def login():
     return {"error": "Invalid credentials"}, 401
 
 
-# ✅ FORGOT PASSWORD (POSTMAN DEMO)
+# ✅ FORGOT PASSWORD
 @app.route('/api/forgot-password', methods=['POST'])
 def forgot_password():
     data = request.get_json()
@@ -133,6 +145,94 @@ def reset_password():
 
     return {"message": "Password reset successful"}
 
+
+# 🔥 CREATE OPPORTUNITY
+@app.route('/api/opportunities', methods=['POST'])
+def create_opportunity():
+    data = request.get_json()
+
+    if 'admin_id' not in session:
+        return {"error": "Unauthorized"}, 401
+
+    print("CREATE → admin_id:", session.get('admin_id'))
+
+    opportunity = Opportunity(
+        name=data.get('name'),
+        category=data.get('category'),
+        duration=data.get('duration'),
+        start_date=data.get('start_date'),
+        description=data.get('description'),
+        skills=data.get('skills'),
+        future_opportunities=data.get('future_opportunities'),
+        max_applicants=data.get('max_applicants'),
+        admin_id=session['admin_id']
+    )
+
+    db.session.add(opportunity)
+
+    print("BEFORE SAVE:", data)
+    print("ADMIN ID BEING USED:", session.get('admin_id'))
+
+    db.session.commit()
+
+    # 🔥 ADD THIS
+    all_opps = Opportunity.query.all()
+    print("ALL OPPORTUNITIES IN DB:", all_opps)
+
+    return {"message": "Opportunity created successfully"}
+
+# 🔥 GET OPPORTUNITY
+@app.route('/api/opportunities', methods=['GET'])
+def get_opportunities():
+    if 'admin_id' not in session:
+        return {"error": "Unauthorized"}, 401
+
+    print("FETCH → admin_id:", session.get('admin_id'))
+
+    # 🔥 Check EVERYTHING in DB
+    all_opps = Opportunity.query.all()
+    print("ALL OPPORTUNITIES IN DB:", all_opps)
+
+    # 🔥 Check filtered result
+    opportunities = Opportunity.query.filter_by(admin_id=session['admin_id']).all()
+    print("FILTERED OPPORTUNITIES:", opportunities)
+
+    result = []
+    for opp in opportunities:
+        result.append({
+            "id": opp.id,
+            "name": opp.name,
+            "category": opp.category,
+            "duration": opp.duration,
+            "start_date": opp.start_date,
+            "description": opp.description,
+            "skills": opp.skills,
+            "future_opportunities": opp.future_opportunities,
+            "max_applicants": opp.max_applicants
+        })
+
+    return {"opportunities": result}
+
+@app.route('/api/opportunities/<int:id>', methods=['DELETE', 'OPTIONS'])
+def delete_opportunity(id):
+    if request.method == 'OPTIONS':
+        return {}, 200
+
+    if 'admin_id' not in session:
+        return {"error": "Unauthorized"}, 401
+
+    opp = Opportunity.query.filter_by(
+        id=id,
+        admin_id=session['admin_id']
+    ).first()
+
+    if not opp:
+        return {"error": "Not found"}, 404
+
+    db.session.delete(opp)
+    db.session.commit()
+
+    return {"message": "Deleted"}
 
 # ===== RUN APP =====
 if __name__ == '__main__':
