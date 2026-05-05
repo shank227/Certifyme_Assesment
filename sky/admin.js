@@ -1,4 +1,4 @@
-const captchas = { login:'', signup:'', forgot:'' };
+const captchas = { login: '', signup: '', forgot: '' };
 function generateCaptcha(type) {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
     let code = '';
@@ -9,6 +9,8 @@ function generateCaptcha(type) {
 generateCaptcha('login');
 generateCaptcha('signup');
 generateCaptcha('forgot');
+
+let editingId = null;
 
 // ===== PAGE NAVIGATION =====
 function showPage(pageId) {
@@ -55,8 +57,8 @@ function checkStrength(val) {
     if (/[A-Z]/.test(val)) score++;
     if (/[0-9]/.test(val)) score++;
     if (/[^A-Za-z0-9]/.test(val)) score++;
-    const labels = ['','Weak','Medium','Strong','Very Strong'];
-    const classes = ['','weak','medium','strong','very-strong'];
+    const labels = ['', 'Weak', 'Medium', 'Strong', 'Very Strong'];
+    const classes = ['', 'weak', 'medium', 'strong', 'very-strong'];
     for (let i = 1; i <= 4; i++) {
         const bar = document.getElementById('str' + i);
         bar.className = 'strength-bar';
@@ -65,7 +67,6 @@ function checkStrength(val) {
     document.getElementById('strengthLabel').textContent = val.length > 0 ? labels[score] : '';
 }
 
-// ===== SHOW DASHBOARD =====
 function showDashboard(email) {
     document.getElementById('authWrapper').style.display = 'none';
     document.getElementById('dashboardWrapper').classList.add('active');
@@ -81,6 +82,20 @@ function showDashboard(email) {
     if (window.innerWidth <= 768) {
         document.getElementById('menuToggle').style.display = 'flex';
     }
+
+    // 🔥 NEW: Fetch opportunities from backend
+    fetch("http://127.0.0.1:5000/api/opportunities", {
+        method: "GET",
+        credentials: "include"
+    })
+        .then(res => res.json())
+        .then(data => {
+            console.log("OPPORTUNITIES:", data);
+            renderOpportunities(data.opportunities);
+        })
+        .catch(err => {
+            console.error("Fetch error:", err);
+        });
 }
 
 function handleLogout() {
@@ -93,14 +108,14 @@ function handleLogout() {
 
 // ===== NAV ITEMS =====
 document.querySelectorAll('.nav-item[data-page]').forEach(item => {
-    item.addEventListener('click', function() {
+    item.addEventListener('click', function () {
         const page = this.getAttribute('data-page');
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         this.classList.add('active');
-        
+
         // Hide all sections
         document.querySelectorAll('.dash-section').forEach(s => s.classList.remove('active'));
-        
+
         // Show selected section
         if (page === 'dashboard') {
             document.getElementById('dashboardSection').classList.add('active');
@@ -145,7 +160,7 @@ function changeChartPeriod(period) {
 
     const linePath = document.getElementById('linePath');
     const lineArea = document.getElementById('lineArea');
-    
+
     const path = chartData[period];
     linePath.setAttribute('d', path);
     lineArea.setAttribute('d', path + ' L400,150 L0,150 Z');
@@ -165,7 +180,7 @@ function markAllRead() {
 }
 
 // Close notification dropdown when clicking outside
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     const dropdown = document.getElementById('notificationDropdown');
     const btn = document.getElementById('notifBtn');
     if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
@@ -179,7 +194,7 @@ function toggleTheme() {
     const currentTheme = html.getAttribute('data-theme');
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', newTheme);
-    
+
     // Update icon
     const icon = document.getElementById('themeIcon');
     if (newTheme === 'dark') {
@@ -200,7 +215,7 @@ function closeSearch() {
 }
 
 // Close search on Escape key
-document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
         closeSearch();
         closeCourseModal();
@@ -216,7 +231,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // Close search when clicking outside
-document.getElementById('searchContainer').addEventListener('click', function(e) {
+document.getElementById('searchContainer').addEventListener('click', function (e) {
     if (e.target === this) {
         closeSearch();
     }
@@ -237,7 +252,7 @@ function closeCourseModal() {
 }
 
 // Close modal when clicking outside
-document.getElementById('courseModal').addEventListener('click', function(e) {
+document.getElementById('courseModal').addEventListener('click', function (e) {
     if (e.target === this) {
         closeCourseModal();
     }
@@ -251,8 +266,7 @@ function openOpportunityDetails(title, details) {
     document.getElementById('opportunityDetailApplicants').textContent = details.applicants;
     document.getElementById('opportunityDetailDescription').textContent = details.description;
     document.getElementById('opportunityDetailFuture').textContent = details.futureOpportunities;
-    document.getElementById('opportunityDetailPrereqs').textContent = details.prerequisites;
-    
+
     const skillsContainer = document.getElementById('opportunityDetailSkills');
     skillsContainer.innerHTML = '';
     details.skills.forEach(skill => {
@@ -261,7 +275,7 @@ function openOpportunityDetails(title, details) {
         tag.textContent = skill;
         skillsContainer.appendChild(tag);
     });
-    
+
     document.getElementById('opportunityDetailsModal').classList.add('active');
 }
 
@@ -274,7 +288,7 @@ function applyToOpportunity() {
     closeOpportunityDetailsModal();
 }
 
-document.getElementById('opportunityDetailsModal').addEventListener('click', function(e) {
+document.getElementById('opportunityDetailsModal').addEventListener('click', function (e) {
     if (e.target === this) {
         closeOpportunityDetailsModal();
     }
@@ -306,7 +320,7 @@ function viewCourseDetails(courseName) {
     // In a real app, you would open a detailed course modal
 }
 
-document.getElementById('collaboratorCoursesModal').addEventListener('click', function(e) {
+document.getElementById('collaboratorCoursesModal').addEventListener('click', function (e) {
     if (e.target === this) {
         closeCollaboratorCoursesModal();
     }
@@ -322,99 +336,85 @@ function closeOpportunityModal() {
 }
 
 // Close modal when clicking outside
-document.getElementById('opportunityModal').addEventListener('click', function(e) {
+document.getElementById('opportunityModal').addEventListener('click', function (e) {
     if (e.target === this) {
         closeOpportunityModal();
     }
 });
 
 // Handle opportunity form submission
-        document.getElementById('opportunityForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+document.getElementById('opportunityForm').addEventListener('submit', function (e) {
+    e.preventDefault();
 
-            // collect values
-            const name = document.getElementById('oppName').value.trim();
-            const duration = document.getElementById('oppDuration').value.trim();
-            const startDate = document.getElementById('oppStartDate').value;
-            const description = document.getElementById('oppDescription').value.trim();
-            const skillsRaw = document.getElementById('oppSkills').value.trim();
-            const category = document.getElementById('oppCategory').value;
-            const futureOpportunities = document.getElementById('oppFuture').value.trim();
-            const maxApplicants = document.getElementById('oppMaxApplicants').value.trim();
+    const data = {
+        name: document.getElementById('oppName').value,
+        category: document.getElementById('oppCategory').value,
+        duration: document.getElementById('oppDuration').value,
+        start_date: document.getElementById('oppStartDate').value,
+        description: document.getElementById('oppDescription').value,
+        skills: document.getElementById('oppSkills').value,
+        future_opportunities: document.getElementById('oppFuture').value,
+        max_applicants: document.getElementById('oppMaxApplicants').value
+    };
 
-            // basic validation
-            if (!name || !duration || !startDate || !description || !skillsRaw || !category || !futureOpportunities) {
-                showToast('Please fill all required fields');
-                return;
-            }
+    // 🔥 THIS IS WHERE IT GOES
+    if (editingId) {
+        // ✏️ UPDATE
+        fetch(`http://127.0.0.1:5000/api/opportunities/${editingId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            credentials: "include",
+            body: JSON.stringify(data)
+        })
+            .then(res => res.json())
+            .then(() => {
+                editingId = null;
 
-            // parse skills
-            const skills = skillsRaw.split(',').map(s => s.trim()).filter(Boolean);
-
-            // create opportunity card element
-            const card = document.createElement('div');
-            card.className = 'opportunity-card';
-
-            // header and meta
-            const headerHtml = `
-                <div class="opportunity-card-header">
-                    <h5>${escapeHtml(name)}</h5>
-                    <div class="opportunity-meta">
-                        <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${escapeHtml(duration)}</span>
-                        <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${escapeHtml(startDate)}</span>
-                    </div>
-                </div>
-                <p class="opportunity-description">${escapeHtml(description)}</p>
-            `;
-
-            // skills tags
-            const skillsHtml = `<div class="opportunity-skills"><div class="opportunity-skills-label">Skills You'll Gain</div><div class="skills-tags">
-                ${skills.map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}
-            </div></div>`;
-
-            // footer
-            const applicantsCount = maxApplicants ? `${parseInt(maxApplicants,10)} applicants` : '0 applicants';
-            const footerHtml = `
-                <div class="opportunity-footer">
-                    <span class="applicants-count">${escapeHtml(applicantsCount)}</span>
-                    <button class="view-course-btn" style="width: auto; padding: 8px 16px;">View Details</button>
-                </div>
-            `;
-
-            card.innerHTML = headerHtml + skillsHtml + footerHtml;
-
-            // wire up the View Details button to open details modal
-            const viewBtn = card.querySelector('.view-course-btn');
-            viewBtn.addEventListener('click', function() {
-                openOpportunityDetails(name, {
-                    duration: duration,
-                    startDate: startDate,
-                    description: description,
-                    skills: skills,
-                    applicants: maxApplicants ? parseInt(maxApplicants,10) : 0,
-                    futureOpportunities: futureOpportunities,
-                    prerequisites: ''
+                return fetch("http://127.0.0.1:5000/api/opportunities", {
+                    method: "GET",
+                    credentials: "include"
                 });
+            })
+            .then(res => res.json())
+            .then(data => {
+                renderOpportunities(data.opportunities);
             });
+    } else {
+        // ➕ CREATE (your existing POST code)
+        fetch("http://127.0.0.1:5000/api/opportunities", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            credentials: "include",
+            body: JSON.stringify(data)
+        })
+            .then(res => res.json())
+            .then(() => {
+                return fetch("http://127.0.0.1:5000/api/opportunities", {
+                    method: "GET",
+                    credentials: "include"
+                });
+            })
+            .then(res => res.json())
+            .then(data => {
+                renderOpportunities(data.opportunities);
+            });
+    }
 
-            // append to grid
-            const grid = document.querySelector('.opportunities-grid');
-            if (grid) grid.appendChild(card);
-
-            showToast('Opportunity created successfully!');
-            closeOpportunityModal();
-            this.reset();
-        });
-
-        // small helper to avoid HTML injection when inserting text
-        function escapeHtml(str) {
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
+    this.reset();
+});
+// small helper to avoid HTML injection when inserting text
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 
 // ===== QUICK ADD STUDENT MODAL =====
 function openQuickAddModal() {
@@ -425,13 +425,13 @@ function closeQuickAddModal() {
     document.getElementById('quickAddModal').classList.remove('active');
 }
 
-document.getElementById('quickAddModal').addEventListener('click', function(e) {
+document.getElementById('quickAddModal').addEventListener('click', function (e) {
     if (e.target === this) {
         closeQuickAddModal();
     }
 });
 
-document.getElementById('quickAddForm').addEventListener('submit', function(e) {
+document.getElementById('quickAddForm').addEventListener('submit', function (e) {
     e.preventDefault();
     showToast('Student added successfully! Email invitation sent.');
     closeQuickAddModal();
@@ -447,13 +447,13 @@ function closeBulkUploadModal() {
     document.getElementById('bulkUploadModal').classList.remove('active');
 }
 
-document.getElementById('bulkUploadModal').addEventListener('click', function(e) {
+document.getElementById('bulkUploadModal').addEventListener('click', function (e) {
     if (e.target === this) {
         closeBulkUploadModal();
     }
 });
 
-document.getElementById('bulkUploadForm').addEventListener('submit', function(e) {
+document.getElementById('bulkUploadForm').addEventListener('submit', function (e) {
     e.preventDefault();
     const fileInput = document.getElementById('csvFileInput');
     if (fileInput.files.length === 0) {
@@ -493,13 +493,13 @@ function closeQuickAddVerifierModal() {
     document.getElementById('quickAddVerifierModal').classList.remove('active');
 }
 
-document.getElementById('quickAddVerifierModal').addEventListener('click', function(e) {
+document.getElementById('quickAddVerifierModal').addEventListener('click', function (e) {
     if (e.target === this) {
         closeQuickAddVerifierModal();
     }
 });
 
-document.getElementById('quickAddVerifierForm').addEventListener('submit', function(e) {
+document.getElementById('quickAddVerifierForm').addEventListener('submit', function (e) {
     e.preventDefault();
     showToast('Verifier added successfully! Email invitation sent.');
     closeQuickAddVerifierModal();
@@ -515,13 +515,13 @@ function closeBulkUploadVerifierModal() {
     document.getElementById('bulkUploadVerifierModal').classList.remove('active');
 }
 
-document.getElementById('bulkUploadVerifierModal').addEventListener('click', function(e) {
+document.getElementById('bulkUploadVerifierModal').addEventListener('click', function (e) {
     if (e.target === this) {
         closeBulkUploadVerifierModal();
     }
 });
 
-document.getElementById('bulkUploadVerifierForm').addEventListener('submit', function(e) {
+document.getElementById('bulkUploadVerifierForm').addEventListener('submit', function (e) {
     e.preventDefault();
     const fileInput = document.getElementById('csvVerifierFileInput');
     if (fileInput.files.length === 0) {
@@ -558,7 +558,7 @@ function openVerifierDetails(name, stats) {
     document.getElementById('verifierTotalStudents').textContent = stats.totalStudents;
     document.getElementById('verifierCertified').textContent = stats.certified;
     document.getElementById('verifierInProgress').textContent = stats.inProgress;
-    
+
     // Populate subjects
     const container = document.getElementById('subjectsContainer');
     container.innerHTML = '';
@@ -571,7 +571,7 @@ function openVerifierDetails(name, stats) {
         `;
         container.appendChild(div);
     });
-    
+
     document.getElementById('verifierDetailsModal').classList.add('active');
 }
 
@@ -579,7 +579,7 @@ function closeVerifierDetailsModal() {
     document.getElementById('verifierDetailsModal').classList.remove('active');
 }
 
-document.getElementById('verifierDetailsModal').addEventListener('click', function(e) {
+document.getElementById('verifierDetailsModal').addEventListener('click', function (e) {
     if (e.target === this) {
         closeVerifierDetailsModal();
     }
@@ -590,20 +590,20 @@ function filterStudents() {
     const statusFilter = document.getElementById('statusFilter').value;
     const dateFrom = document.getElementById('dateFrom').value;
     const dateTo = document.getElementById('dateTo').value;
-    
+
     const rows = document.querySelectorAll('#studentsTableBody tr');
-    
+
     rows.forEach(row => {
         const rowStatus = row.getAttribute('data-status');
         let showRow = true;
-        
+
         // Status filter
         if (statusFilter !== 'all' && rowStatus !== statusFilter) {
             showRow = false;
         }
-        
+
         // Date filters would be implemented here with actual date data
-        
+
         row.style.display = showRow ? '' : 'none';
     });
 }
@@ -613,91 +613,226 @@ function filterVerifiers() {
     const statusFilter = document.getElementById('verifierStatusFilter').value;
     const dateFrom = document.getElementById('verifierDateFrom').value;
     const dateTo = document.getElementById('verifierDateTo').value;
-    
+
     const rows = document.querySelectorAll('#verifiersTableBody tr');
-    
+
     rows.forEach(row => {
         const rowStatus = row.getAttribute('data-status');
         let showRow = true;
-        
+
         // Status filter
         if (statusFilter !== 'all' && rowStatus !== statusFilter) {
             showRow = false;
         }
-        
+
         // Date filters would be implemented here with actual date data
-        
+
         row.style.display = showRow ? '' : 'none';
     });
 }
 
 // ===== LOGIN =====
-document.getElementById('loginForm').addEventListener('submit', function(e) {
+document.getElementById('loginForm').addEventListener('submit', function (e) {
     e.preventDefault();
     clearAllErrors('loginForm');
     let valid = true;
+
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     const captchaInput = document.getElementById('loginCaptchaInput').value.trim();
+    const rememberEl = document.getElementById("rememberMe");
+    const remember = rememberEl ? rememberEl.checked : false;
 
-    if (!email || !isValidEmail(email)) { showError('loginEmailErr'); document.getElementById('loginEmail').classList.add('error'); valid = false; }
-    if (!password) { showError('loginPasswordErr','Please enter your password'); document.getElementById('loginPassword').classList.add('error'); valid = false; }
-    if (!captchaInput) { showError('loginCaptchaErr','Please enter the captcha code'); valid = false; }
-    else if (captchaInput !== captchas.login) { showError('loginCaptchaErr','Captcha does not match. Please try again.'); valid = false; generateCaptcha('login'); }
+    if (!email || !isValidEmail(email)) {
+        showError('loginEmailErr');
+        document.getElementById('loginEmail').classList.add('error');
+        valid = false;
+    }
 
-    if (!valid) { shakeForm('loginForm'); return; }
+    if (!password) {
+        showError('loginPasswordErr', 'Please enter your password');
+        document.getElementById('loginPassword').classList.add('error');
+        valid = false;
+    }
 
-    showToast('Login successful! Redirecting...');
-    setTimeout(() => showDashboard(email), 1200);
-    generateCaptcha('login');
+    if (!captchaInput) {
+        showError('loginCaptchaErr', 'Please enter the captcha code');
+        valid = false;
+    } else if (captchaInput !== captchas.login) {
+        showError('loginCaptchaErr', 'Captcha does not match. Please try again.');
+        valid = false;
+        generateCaptcha('login');
+    }
+
+    if (!valid) {
+        shakeForm('loginForm');
+        return;
+    }
+
+    fetch("http://127.0.0.1:5000/api/login", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        credentials: "include",
+        body: JSON.stringify({
+            email: email,
+            password: password,
+            remember: remember // 🔥 NEW
+        })
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.message) {
+                showToast("Login successful!");
+                setTimeout(() => showDashboard(email), 1000);
+            } else {
+                showToast("Invalid email or password");
+            }
+            generateCaptcha('login');
+        })
+        .catch(err => {
+            console.error(err);
+            showToast("Server error");
+        });
 });
 
 // ===== SIGNUP =====
-document.getElementById('signupForm').addEventListener('submit', function(e) {
+document.getElementById('signupForm').addEventListener('submit', function (e) {
     e.preventDefault();
     clearAllErrors('signupForm');
     let valid = true;
+
     const name = document.getElementById('signupName').value.trim();
     const email = document.getElementById('signupEmail').value.trim();
     const password = document.getElementById('signupPassword').value.trim();
     const confirmPassword = document.getElementById('signupConfirmPassword').value.trim();
     const captchaInput = document.getElementById('signupCaptchaInput').value.trim();
 
-    if (!name) { showError('signupNameErr'); document.getElementById('signupName').classList.add('error'); valid = false; }
-    if (!email || !isValidEmail(email)) { showError('signupEmailErr'); document.getElementById('signupEmail').classList.add('error'); valid = false; }
-    if (!password || password.length < 8) { showError('signupPasswordErr'); document.getElementById('signupPassword').classList.add('error'); valid = false; }
-    if (!confirmPassword || password !== confirmPassword) { showError('signupConfirmPasswordErr'); document.getElementById('signupConfirmPassword').classList.add('error'); valid = false; }
-    if (!captchaInput) { showError('signupCaptchaErr','Please enter the captcha code'); valid = false; }
-    else if (captchaInput !== captchas.signup) { showError('signupCaptchaErr','Captcha does not match.'); valid = false; generateCaptcha('signup'); }
+    // ✅ EMAIL VALIDATION (single source of truth)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!valid) { shakeForm('signupForm'); return; }
-    showToast('Account created successfully!');
-    generateCaptcha('signup');
-    this.reset(); checkStrength('');
-    setTimeout(() => showPage('loginPage'), 1500);
+    if (!emailRegex.test(email)) {
+        showError('signupEmailErr', 'Please enter a valid email');
+        document.getElementById('signupEmail').classList.add('error');
+        valid = false;
+    }
+
+    if (!name) {
+        showError('signupNameErr');
+        document.getElementById('signupName').classList.add('error');
+        valid = false;
+    }
+
+    if (!password || password.length < 8) {
+        showError('signupPasswordErr');
+        document.getElementById('signupPassword').classList.add('error');
+        valid = false;
+    }
+
+    if (!confirmPassword || password !== confirmPassword) {
+        showError('signupConfirmPasswordErr');
+        document.getElementById('signupConfirmPassword').classList.add('error');
+        valid = false;
+    }
+
+    if (!captchaInput) {
+        showError('signupCaptchaErr', 'Please enter the captcha code');
+        valid = false;
+    } else if (captchaInput !== captchas.signup) {
+        showError('signupCaptchaErr', 'Captcha does not match.');
+        valid = false;
+        generateCaptcha('signup');
+    }
+
+    if (!valid) {
+        shakeForm('signupForm');
+        return;
+    }
+
+    // ✅ API CALL
+    fetch("http://127.0.0.1:5000/api/signup", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            full_name: name,
+            email: email,
+            password: password
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.message) {
+            showToast("Signup successful!");
+            this.reset();
+            checkStrength('');
+            setTimeout(() => showPage('loginPage'), 1500);
+        } else {
+            showToast(data.error || "Signup failed");
+        }
+        generateCaptcha('signup');
+    })
+    .catch(err => {
+        console.error(err);
+        showToast("Server error");
+    });
 });
 
 // ===== FORGOT =====
-document.getElementById('forgotForm').addEventListener('submit', function(e) {
+document.getElementById('forgotForm').addEventListener('submit', function (e) {
     e.preventDefault();
     clearAllErrors('forgotForm');
     let valid = true;
+
     const email = document.getElementById('forgotEmail').value.trim();
     const captchaInput = document.getElementById('forgotCaptchaInput').value.trim();
 
-    if (!email || !isValidEmail(email)) { showError('forgotEmailErr'); document.getElementById('forgotEmail').classList.add('error'); valid = false; }
-    if (!captchaInput) { showError('forgotCaptchaErr','Please enter the captcha code'); valid = false; }
-    else if (captchaInput !== captchas.forgot) { showError('forgotCaptchaErr','Captcha does not match.'); valid = false; generateCaptcha('forgot'); }
+    if (!email || !isValidEmail(email)) {
+        showError('forgotEmailErr');
+        document.getElementById('forgotEmail').classList.add('error');
+        valid = false;
+    }
 
-    if (!valid) { shakeForm('forgotForm'); return; }
-    showToast('Reset link sent to your email!');
-    generateCaptcha('forgot');
-    this.reset();
+    if (!captchaInput) {
+        showError('forgotCaptchaErr', 'Please enter the captcha code');
+        valid = false;
+    } else if (captchaInput !== captchas.forgot) {
+        showError('forgotCaptchaErr', 'Captcha does not match.');
+        valid = false;
+        generateCaptcha('forgot');
+    }
+
+    if (!valid) {
+        shakeForm('forgotForm');
+        return;
+    }
+
+    fetch("http://127.0.0.1:5000/api/forgot-password", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            email: email
+        })
+    })
+        .then(res => res.json())
+        .then(data => {
+            showToast(data.message);
+            generateCaptcha('forgot');
+            this.reset();
+        })
+        .catch(err => {
+            console.error(err);
+            showToast("Server error");
+        });
 });
 
 // Clear errors on input
 document.querySelectorAll('input').forEach(input => {
-    input.addEventListener('input', function() {
+    input.addEventListener('input', function () {
         this.classList.remove('error');
         const err = this.closest('.form-group')?.querySelector('.error-msg');
         if (err) err.classList.remove('show');
@@ -709,3 +844,147 @@ window.addEventListener('resize', () => {
     const toggle = document.getElementById('menuToggle');
     if (toggle) toggle.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
 });
+function renderOpportunities(opps) {
+    const container = document.getElementById("opportunityContainer");
+    container.innerHTML = "";
+
+    if (!opps || opps.length === 0) {
+        container.innerHTML = "<p>No opportunities yet</p>";
+        return;
+    }
+
+    opps.forEach(opp => {
+        const card = document.createElement("div");
+        card.className = "opportunity-card";
+
+        card.innerHTML = `
+            <h3>${opp.name}</h3>
+            <p><strong>Category:</strong> ${opp.category}</p>
+            <p><strong>Duration:</strong> ${opp.duration}</p>
+            <p><strong>Start:</strong> ${opp.start_date}</p>
+            <p>${opp.description}</p>
+
+            <div class="card-footer">
+                <span>Max: ${opp.max_applicants || "N/A"}</span>
+
+                <div class="card-actions">
+                    <button class="view-btn">View Details</button>
+                    <button class="delete-btn">Delete</button>
+                </div>
+            </div>
+        `;
+
+        // 🔥 View Details
+        card.querySelector(".view-btn").addEventListener("click", () => {
+            openOpportunityDetails(opp.name, {
+                duration: opp.duration,
+                startDate: opp.start_date,
+                description: opp.description,
+                skills: (opp.skills || "").split(","),
+                applicants: opp.max_applicants || 0,
+                futureOpportunities: opp.future_opportunities
+            });
+        });
+
+        // 🗑 Delete
+        card.querySelector(".delete-btn").addEventListener("click", () => {
+            deleteOpportunity(opp.id);
+        });
+
+        container.appendChild(card);
+    });
+}
+
+function renderOpportunities(opps) {
+    const container = document.getElementById("opportunityContainer");
+    container.innerHTML = "";
+
+    if (!opps || opps.length === 0) {
+        container.innerHTML = "<p>No opportunities yet</p>";
+        return;
+    }
+
+    opps.forEach(opp => {
+        const card = document.createElement("div");
+        card.className = "opportunity-card";
+
+        card.innerHTML = `
+            <h3>${opp.name}</h3>
+            <p><strong>Category:</strong> ${opp.category}</p>
+            <p><strong>Duration:</strong> ${opp.duration}</p>
+            <p><strong>Start:</strong> ${opp.start_date}</p>
+            <p>${opp.description}</p>
+
+            <div class="card-footer">
+                <span>Max: ${opp.max_applicants || "N/A"}</span>
+
+                <div class="card-actions">
+                    <button class="view-btn">View Details</button>
+                    <button class="edit-btn">Edit</button>
+                    <button class="delete-btn">Delete</button>
+                </div>
+            </div>
+        `;
+
+        // 👁 View Details
+        card.querySelector(".view-btn").addEventListener("click", () => {
+            openOpportunityDetails(opp.name, {
+                duration: opp.duration,
+                startDate: opp.start_date,
+                description: opp.description,
+                skills: (opp.skills || "").split(","),
+                applicants: opp.max_applicants || 0,
+                futureOpportunities: opp.future_opportunities
+            });
+        });
+
+        // ✏️ Edit
+        card.querySelector(".edit-btn").addEventListener("click", () => {
+            editOpportunity(opp);
+        });
+
+        // 🗑 Delete
+        card.querySelector(".delete-btn").addEventListener("click", () => {
+            deleteOpportunity(opp.id);
+        });
+
+        container.appendChild(card);
+    });
+}
+
+function deleteOpportunity(id) {
+    if (!confirm("Are you sure you want to delete this opportunity?")) return;
+
+    fetch(`http://127.0.0.1:5000/api/opportunities/${id}`, {
+        method: "DELETE",
+        credentials: "include"
+    })
+        .then(res => res.json())
+        .then(() => {
+            // reload from DB (truth)
+            return fetch("http://127.0.0.1:5000/api/opportunities", {
+                method: "GET",
+                credentials: "include"
+            });
+        })
+        .then(res => res.json())
+        .then(data => {
+            renderOpportunities(data.opportunities);
+        })
+        .catch(err => console.error("ERROR:", err));
+}
+
+function editOpportunity(opp) {
+    editingId = opp.id;
+
+    document.getElementById('oppName').value = opp.name;
+    document.getElementById('oppCategory').value = opp.category;
+    document.getElementById('oppDuration').value = opp.duration;
+    document.getElementById('oppStartDate').value = opp.start_date;
+    document.getElementById('oppDescription').value = opp.description;
+    document.getElementById('oppSkills').value = opp.skills;
+    document.getElementById('oppFuture').value = opp.future_opportunities;
+    document.getElementById('oppMaxApplicants').value = opp.max_applicants;
+
+    openOpportunityModal(); // reuse your existing modal
+}
